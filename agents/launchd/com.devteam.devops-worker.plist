@@ -2,10 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>Label</key><string>com.devteam.devops-worker</string>
-  <key>ProgramArguments</key><array><string>/opt/homebrew/bin/node</string><string>/Users/emanuuelmelo/Documents/projetos/pessoal/devteam/kanban/agents/host_worker.mjs</string><string>devops</string></array>
-  <key>WorkingDirectory</key><string>/Users/emanuuelmelo/Documents/projetos/pessoal/devteam/kanban</string>
-  <key>EnvironmentVariables</key><dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string><key>CODEX_BIN</key><string>/Users/emanuuelmelo/.vscode/extensions/openai.chatgpt-26.825.51511-darwin-arm64/bin/macos-aarch64/codex</string></dict>
+  <key>ProgramArguments</key><array><string>/opt/homebrew/bin/node</string><string>/Users/emanuuelmelo/Library/Application Support/Devteam/agents/host_worker.mjs</string><string>devops</string></array>
+  <key>WorkingDirectory</key><string>/Users/emanuuelmelo/Library/Application Support/Devteam</string>
+  <key>EnvironmentVariables</key><dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string><key>CODEX_BIN</key><string>/Users/emanuuelmelo/.vscode/extensions/openai.chatgpt-26.825.51511-darwin-arm64/bin/macos-aarch64/codex</string><key>KANBAN_API</key><string>http://127.0.0.1:8001/api/kanban</string></dict>
   <key>RunAtLoad</key><true/><key>KeepAlive</key><true/><key>ThrottleInterval</key><integer>10</integer>
-  <key>StandardOutPath</key><string>/Users/emanuuelmelo/Documents/projetos/pessoal/devteam/kanban/agents/logs/devops.log</string>
-  <key>StandardErrorPath</key><string>/Users/emanuuelmelo/Documents/projetos/pessoal/devteam/kanban/agents/logs/devops.error.log</string>
+  <key>StandardOutPath</key><string>/Users/emanuuelmelo/Library/Logs/Devteam/devops.log</string>
+  <key>StandardErrorPath</key><string>/Users/emanuuelmelo/Library/Logs/Devteam/devops.error.log</string>
 </dict></plist>
