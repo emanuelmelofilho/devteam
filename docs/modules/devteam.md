@@ -1,5 +1,10 @@
 # Devteam
 
+## v0.2.15
+
+- Adiciona timeout às chamadas dos workers para que se recuperem automaticamente após reinícios da API ou do RabbitMQ.
+- Permite que Developer, Tester e DevOps retomem o polling sem permanecer presos em conexões antigas.
+
 ## v0.2.13
 
 - Move o runtime e os logs dos workers para pastas da biblioteca do usuário no macOS.

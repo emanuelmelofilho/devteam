@@ -16,6 +16,7 @@ const rabbitAuth = Buffer.from(`${process.env.RABBITMQ_USER || 'guest'}:${proces
 const apiBase = process.env.KANBAN_API || 'http://127.0.0.1:8000/api/kanban';
 const codexBin = process.env.CODEX_BIN || 'codex';
 const schema = resolve('agents/worker_output_schema.json');
+const requestTimeoutMs = Number(process.env.WORKER_HTTP_TIMEOUT_MS || 15000);
 let stopping = false;
 
 const delay = ms => new Promise(resolvePromise=>setTimeout(resolvePromise, ms));
@@ -24,6 +25,7 @@ const log = message => console.log(`[${role}_worker] ${new Date().toISOString()}
 async function api(path, token, options = {}) {
   const response = await fetch(`${apiBase}${path}`, {
     ...options,
+    signal: options.signal || AbortSignal.timeout(requestTimeoutMs),
     headers: {'Accept':'application/json','Content-Type':'application/json','Authorization':`Bearer ${token}`,...options.headers},
   });
   const body = response.status === 204 ? null : await response.json().catch(()=>null);
@@ -145,6 +147,7 @@ async function processTask(task) {
 async function nextMessage() {
   const response = await fetch(`${rabbitUrl}/api/queues/%2F/${roles[role].queue}/get`, {
     method:'POST', headers:{'Authorization':`Basic ${rabbitAuth}`,'Content-Type':'application/json'},
+    signal: AbortSignal.timeout(requestTimeoutMs),
     body:JSON.stringify({count:1,ackmode:'ack_requeue_false',encoding:'auto',truncate:100000}),
   });
   if (!response.ok) throw new Error(`RabbitMQ HTTP ${response.status}`);

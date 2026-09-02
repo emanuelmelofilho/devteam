@@ -75,6 +75,30 @@ class TaskWorkflowTest extends TestCase
         $this->assertDatabaseHas('activity_logs', ['task_id' => $task->id, 'event' => 'task.finished']);
     }
 
+    public function test_commit_hash_is_saved_in_task_metadata_when_sent_to_review(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::create(['name' => 'App', 'directory' => '/app']);
+        $task = Task::create([
+            'project_id' => $project->id,
+            'title' => 'Persistir commit',
+            'lane' => 'in_progress',
+            'assigned_agent' => 'developer_worker',
+        ]);
+        $commitHash = 'a6daa46b8762c997ec752f4bb7093f70ffa4e2ef';
+
+        $this->actingAs($user, 'sanctum')->patchJson("/api/kanban/tasks/{$task->id}", [
+            'lane' => 'review',
+            'work_summary' => 'Implementação concluída.',
+            'commit_hash' => $commitHash,
+        ])->assertOk()
+            ->assertJsonPath('lane', 'review')
+            ->assertJsonPath('assigned_agent', 'tester_worker')
+            ->assertJsonPath('metadata.commit_hash', $commitHash);
+
+        $this->assertDatabaseHas('tasks', ['id' => $task->id, 'metadata' => json_encode(['commit_hash' => $commitHash])]);
+    }
+
     public function test_user_can_filter_the_explained_logs_by_project(): void
     {
         $user = User::factory()->create();
