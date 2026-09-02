@@ -30,7 +30,7 @@ class TaskController extends Controller
         $data = $request->validate([
             'project_id' => 'required|exists:projects,id',
             'title' => 'required|string',
-            'description' => 'required|string|min:600',
+            'description' => 'required|string',
             'assigned_agent' => 'required|in:developer_worker,tester_worker,devops_worker',
             'assignee_id' => 'nullable|exists:users,id',
         ]);

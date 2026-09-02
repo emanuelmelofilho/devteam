@@ -32,7 +32,7 @@ class TaskWorkflowTest extends TestCase
         $response->assertCreated()->assertJsonPath('lane', 'todo')->assertJsonPath('branch', 'developer');
     }
 
-    public function test_task_requires_a_detailed_request_with_at_least_600_characters(): void
+    public function test_task_accepts_a_short_request_but_still_requires_description(): void
     {
         $user = User::factory()->create();
         $project = Project::create(['name' => 'App', 'directory' => '/app']);
@@ -42,13 +42,13 @@ class TaskWorkflowTest extends TestCase
             'title' => 'Nova tela',
             'description' => 'Descrição curta',
             'assigned_agent' => 'developer_worker',
-        ])->assertUnprocessable()->assertJsonValidationErrors('description');
+        ])->assertCreated()->assertJsonPath('description', 'Descrição curta');
 
         $this->postJson('/api/kanban/tasks', [
             'project_id' => $project->id,
             'title' => 'Nova tela',
-            'description' => str_repeat('a', 600),
-        ])->assertUnprocessable()->assertJsonValidationErrors('assigned_agent');
+            'assigned_agent' => 'developer_worker',
+        ])->assertUnprocessable()->assertJsonValidationErrors('description');
     }
 
     public function test_workflow_assigns_agents_and_requires_summary_and_version(): void

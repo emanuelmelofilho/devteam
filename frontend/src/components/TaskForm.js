@@ -41,9 +41,9 @@ export default function TaskForm({projectId, onCreated}){
         <p className="modal-description">Descreva com detalhes o trabalho que deverá ser executado.</p>
         {error && <div className="alert error">{error}</div>}
         <label className="field"><span>Título</span><input placeholder="Título da tarefa" value={title} onChange={event=>setTitle(event.target.value)} required autoFocus /></label>
-        <label className="field"><span>Solicitação</span><textarea placeholder="Informe requisitos, contexto, comportamento esperado e critérios de aceite." value={description} onChange={event=>setDescription(event.target.value)} required minLength={600} /><small className={description.length > 0 && description.length < 600 ? 'character-count invalid' : 'character-count'}>{description.length}/600 caracteres mínimos</small></label>
+        <label className="field"><span>Solicitação</span><textarea placeholder="Informe requisitos, contexto, comportamento esperado e critérios de aceite." value={description} onChange={event=>setDescription(event.target.value)} required /></label>
         <label className="field"><span>Quem vai executar</span><select value={assignedAgent} onChange={event=>setAssignedAgent(event.target.value)} required><option value="developer_worker">Desenvolvedor</option><option value="tester_worker">Testador</option><option value="devops_worker">DevOps</option></select></label>
-        <footer className="modal-actions"><button className="button ghost" type="button" onClick={close} disabled={saving}>Cancelar</button><button className="button primary" type="submit" disabled={saving || description.length < 600}>{saving ? 'Criando…' : 'Criar tarefa'}</button></footer>
+        <footer className="modal-actions"><button className="button ghost" type="button" onClick={close} disabled={saving}>Cancelar</button><button className="button primary" type="submit" disabled={saving}>{saving ? 'Criando…' : 'Criar tarefa'}</button></footer>
       </form>
     </div>}
   </>;

@@ -1,5 +1,10 @@
 # Módulo de atividades
 
+## v0.2.12
+
+- Remove o limite mínimo de 600 caracteres da solicitação ao criar uma tarefa.
+- Mantém a descrição obrigatória, permitindo solicitações curtas quando forem suficientes.
+
 ## v0.2.8
 
 - Organiza cada projeto do quadro de atividades em um acordeão independente.
