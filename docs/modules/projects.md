@@ -1,5 +1,10 @@
 # Módulo de projetos
 
+## v0.2.14
+
+- Corrige a exibição da logo nas listagens de projetos e atividades quando a interface é acessada por hostname ou IP diferente de `localhost`.
+- Resolve o caminho da imagem usando a origem configurada da API e exibe a inicial do projeto caso o arquivo não possa ser carregado.
+
 ## v0.2.0
 
 - Adiciona seletor nativo de diretório no cadastro e mantém a entrada manual de caminho.

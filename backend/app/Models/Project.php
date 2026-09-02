@@ -16,7 +16,13 @@ class Project extends Model
 
     public function getLogoUrlAttribute(): ?string
     {
-        return $this->logo_path ? Storage::disk('project_logos')->url($this->logo_path) : null;
+        if (! $this->logo_path) {
+            return null;
+        }
+
+        $url = Storage::disk('project_logos')->url($this->logo_path);
+
+        return parse_url($url, PHP_URL_PATH) ?: $url;
     }
 
     public function tasks()

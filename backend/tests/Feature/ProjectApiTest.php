@@ -28,7 +28,11 @@ class ProjectApiTest extends TestCase
             ),
         ]);
 
-        $response->assertCreated()->assertJsonPath('name', 'Projeto com logo');
+        $response->assertCreated()
+            ->assertJsonPath('name', 'Projeto com logo')
+            ->assertJsonPath('logo_url', fn ($url) => is_string($url)
+                && str_starts_with($url, '/')
+                && ! str_starts_with($url, '//'));
         $project = Project::findOrFail($response->json('id'));
         $this->assertNotNull($project->logo_path);
         Storage::disk('project_logos')->assertExists($project->logo_path);
