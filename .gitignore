@@ -1,0 +1,30 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+auth.json
+
+# Dependencies and generated builds
+node_modules/
+vendor/
+frontend/build/
+public/build/
+
+# Runtime data
+*.log
+*.sqlite
+*.sqlite-*
+backend/public/storage
+backend/public/project-logos/
+backend/storage/app/public/project-logos/
+backend/storage/framework/
+backend/storage/logs/
+
+# Test and editor artifacts
+.phpunit.cache/
+.phpunit.result.cache
+.DS_Store
+.idea/
+.vscode/
+.cursor/
+.codex/

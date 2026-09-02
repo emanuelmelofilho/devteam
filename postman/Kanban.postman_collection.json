@@ -1,0 +1,45 @@
+{
+  "info": {
+    "name": "Kanban API",
+    "_postman_id": "kanban-collection",
+    "description": "Basic Kanban API collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"configure-no-ambiente\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api","auth","login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Projects",
+      "request": {
+        "method": "GET",
+        "header": [
+          {"key":"Authorization","value":"Bearer {{token}}"}
+        ],
+        "url": {"raw":"{{baseUrl}}/api/kanban/projects","host":["{{baseUrl}}"],"path":["api","kanban","projects"]}
+      }
+    }
+  ]
+}

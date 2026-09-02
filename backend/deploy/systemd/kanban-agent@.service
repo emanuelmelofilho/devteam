@@ -1,0 +1,12 @@
+[Unit]
+Description=Kanban Agent %i
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+Restart=always
+ExecStart=/usr/bin/php /var/www/html/agents/%i_worker.php
+
+[Install]
+WantedBy=multi-user.target
