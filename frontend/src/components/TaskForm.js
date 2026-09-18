@@ -5,6 +5,7 @@ export default function TaskForm({projectId, onCreated}){
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assignedAgent, setAssignedAgent] = useState('developer_worker');
+  const [originTaskId, setOriginTaskId] = useState('');
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -14,8 +15,10 @@ export default function TaskForm({projectId, onCreated}){
     setSaving(true);
     setError('');
     try{
-      const response = await api.post('/kanban/tasks', {project_id: projectId, title, description, assigned_agent: assignedAgent});
-      setTitle(''); setDescription(''); setAssignedAgent('developer_worker');
+      const payload = {project_id: projectId, title, description, assigned_agent: assignedAgent};
+      if (originTaskId) payload.origin_task_id = originTaskId;
+      const response = await api.post('/kanban/tasks', payload);
+      setTitle(''); setDescription(''); setAssignedAgent('developer_worker'); setOriginTaskId('');
       setOpen(false);
       if (onCreated) onCreated(response.data);
     }catch(requestError){
@@ -43,6 +46,7 @@ export default function TaskForm({projectId, onCreated}){
         <label className="field"><span>Título</span><input placeholder="Título da tarefa" value={title} onChange={event=>setTitle(event.target.value)} required autoFocus /></label>
         <label className="field"><span>Solicitação</span><textarea placeholder="Informe requisitos, contexto, comportamento esperado e critérios de aceite." value={description} onChange={event=>setDescription(event.target.value)} required /></label>
         <label className="field"><span>Quem vai executar</span><select value={assignedAgent} onChange={event=>setAssignedAgent(event.target.value)} required><option value="developer_worker">Desenvolvedor</option><option value="tester_worker">Testador</option><option value="devops_worker">DevOps</option></select></label>
+        <label className="field"><span>Tarefa de origem (opcional)</span><input type="number" min="1" placeholder="Nº da tarefa que gerou este bug, se aplicável" value={originTaskId} onChange={event=>setOriginTaskId(event.target.value)} /></label>
         <footer className="modal-actions"><button className="button ghost" type="button" onClick={close} disabled={saving}>Cancelar</button><button className="button primary" type="submit" disabled={saving}>{saving ? 'Criando…' : 'Criar tarefa'}</button></footer>
       </form>
     </div>}

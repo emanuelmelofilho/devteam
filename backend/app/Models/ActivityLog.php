@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ActivityLog extends Model
 {
-    protected $fillable = ['project_id', 'task_id', 'user_id', 'scope', 'event', 'title', 'details', 'metadata'];
+    protected $fillable = ['project_id', 'task_id', 'user_id', 'agent_execution_id', 'scope', 'event', 'title', 'details', 'metadata'];
 
     protected $casts = ['metadata' => 'array'];
 
@@ -18,6 +18,11 @@ class ActivityLog extends Model
     public function task()
     {
         return $this->belongsTo(Task::class);
+    }
+
+    public function execution()
+    {
+        return $this->belongsTo(AgentExecution::class, 'agent_execution_id');
     }
 
     public function user()

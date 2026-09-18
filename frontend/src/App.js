@@ -4,6 +4,7 @@ import Settings from './components/Settings';
 import Login from './components/Login';
 import Projects from './components/Projects';
 import Logs from './components/Logs';
+import Metrics from './components/Metrics';
 import NotificationCenter from './components/NotificationCenter';
 
 function App(){
@@ -31,6 +32,7 @@ function App(){
             <button className={view === 'board' ? 'active' : ''} onClick={()=>setView('board')}>Quadro</button>
             <button className={view === 'projects' ? 'active' : ''} onClick={()=>setView('projects')}>Projetos</button>
             <button className={view === 'logs' ? 'active' : ''} onClick={()=>setView('logs')}>Logs</button>
+            <button className={view === 'metrics' ? 'active' : ''} onClick={()=>setView('metrics')}>Métricas</button>
             <button className={view === 'settings' ? 'active' : ''} onClick={()=>setView('settings')}>Configurações</button>
           </nav>
           <div className="user-menu">
@@ -41,7 +43,7 @@ function App(){
           </div>
         </header>
         <main className="page-content">
-          {view === 'board' ? <KanbanBoard /> : view === 'projects' ? <Projects /> : view === 'logs' ? <Logs /> : <Settings />}
+          {view === 'board' ? <KanbanBoard /> : view === 'projects' ? <Projects /> : view === 'logs' ? <Logs /> : view === 'metrics' ? <Metrics /> : <Settings />}
         </main>
       </div>
     ) : <Login onLogin={u=>setUser(u)} />

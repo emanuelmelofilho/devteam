@@ -2,9 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>Label</key><string>com.devteam.tester-worker</string>
-  <key>ProgramArguments</key><array><string>/opt/homebrew/bin/node</string><string>/Users/emanuuelmelo/Library/Application Support/Devteam/agents/host_worker.mjs</string><string>tester</string></array>
+  <key>ProgramArguments</key><array><string>/opt/homebrew/bin/node</string><string>/Users/emanuuelmelo/Library/Application Support/Devteam/agents/runtime/host_worker.mjs</string><string>tester</string></array>
   <key>WorkingDirectory</key><string>/Users/emanuuelmelo/Library/Application Support/Devteam</string>
-  <key>EnvironmentVariables</key><dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string><key>CODEX_BIN</key><string>/Users/emanuuelmelo/.vscode/extensions/openai.chatgpt-26.825.51511-darwin-arm64/bin/macos-aarch64/codex</string><key>KANBAN_API</key><string>http://127.0.0.1:8001/api/kanban</string></dict>
+  <key>EnvironmentVariables</key><dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string><key>CODEX_BIN</key><string>/Users/emanuuelmelo/.vscode/extensions/openai.chatgpt-26.908.40401-darwin-arm64/bin/macos-aarch64/codex</string><key>CLAUDE_BIN</key><string>/Users/emanuuelmelo/.vscode/extensions/anthropic.claude-code-2.1.276-darwin-arm64/resources/native-binary/claude</string><key>KANBAN_API</key><string>http://127.0.0.1:8001/api/kanban</string></dict>
   <key>RunAtLoad</key><true/><key>KeepAlive</key><true/><key>ThrottleInterval</key><integer>10</integer>
   <key>StandardOutPath</key><string>/Users/emanuuelmelo/Library/Logs/Devteam/tester.log</string>
   <key>StandardErrorPath</key><string>/Users/emanuuelmelo/Library/Logs/Devteam/tester.error.log</string>

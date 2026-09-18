@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "properties": {
+    "outcome": {"type": "string", "enum": ["success", "bug", "blocked", "publish_blocked"]},
+    "summary": {"type": "string"},
+    "solution": {"type": ["string", "null"], "description": "Developer only: the solution adopted - the cause or need, the approach chosen and why, and what changed in the main files. Null for other roles."},
+    "version": {"type": ["string", "null"]},
+    "branch": {"type": ["string", "null"]},
+    "commit_hash": {"type": ["string", "null"]},
+    "next": {"type": ["string", "null"], "description": "Advisory only. The orchestrator (backend) always decides the next lane, never this field."},
+    "tests": {
+      "type": ["object", "null"],
+      "properties": {
+        "executed": {"type": "boolean"},
+        "passed": {"type": "integer"},
+        "failed": {"type": "integer"}
+      },
+      "additionalProperties": false
+    },
+    "error_type": {"type": ["string", "null"]},
+    "error_message": {"type": ["string", "null"]},
+    "changes": {"type": ["array", "null"], "items": {"type": "string"}}
+  },
+  "required": ["outcome", "summary", "version", "branch", "commit_hash"],
+  "additionalProperties": false
+}
