@@ -1,6 +1,6 @@
 <?php
 // Placeholder DevOps worker that consumes RabbitMQ 'tasks_devops' queue
-require __DIR__ . '/../backend/vendor/autoload.php';
+require __DIR__ . '/../../backend/vendor/autoload.php';
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 $host = getenv('RABBITMQ_HOST') ?: 'rabbitmq';
 $port = getenv('RABBITMQ_PORT') ?: 5672;

@@ -4,8 +4,10 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
-    public function up(): void {
+return new class extends Migration
+{
+    public function up(): void
+    {
         Schema::table('tasks', function (Blueprint $table) {
             $table->string('assigned_agent')->nullable()->after('lane');
             $table->string('branch')->nullable()->after('assigned_agent');
@@ -20,9 +22,11 @@ return new class extends Migration {
             $table->string('client_token')->nullable()->after('phone');
         });
     }
-    public function down(): void {
-        Schema::table('tasks', fn (Blueprint $table) => $table->dropColumn(['assigned_agent','branch','work_summary','version']));
+
+    public function down(): void
+    {
+        Schema::table('tasks', fn (Blueprint $table) => $table->dropColumn(['assigned_agent', 'branch', 'work_summary', 'version']));
         Schema::table('task_comments', fn (Blueprint $table) => $table->dropConstrainedForeignId('user_id'));
-        Schema::table('whatsapp_settings', fn (Blueprint $table) => $table->dropColumn(['phone','client_token']));
+        Schema::table('whatsapp_settings', fn (Blueprint $table) => $table->dropColumn(['phone', 'client_token']));
     }
 };

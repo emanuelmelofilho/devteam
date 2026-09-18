@@ -9,7 +9,7 @@ class Task extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['project_id','title','description','lane','assigned_agent','branch','work_summary','version','assignee_id','reporter_id','metadata'];
+    protected $fillable = ['project_id', 'title', 'description', 'lane', 'assigned_agent', 'branch', 'work_summary', 'version', 'attempt', 'max_attempts', 'assignee_id', 'reporter_id', 'origin_task_id', 'metadata'];
 
     protected $casts = [
         'metadata' => 'array',
@@ -22,12 +22,12 @@ class Task extends Model
 
     public function assignee()
     {
-        return $this->belongsTo(\App\Models\User::class, 'assignee_id');
+        return $this->belongsTo(User::class, 'assignee_id');
     }
 
     public function reporter()
     {
-        return $this->belongsTo(\App\Models\User::class, 'reporter_id');
+        return $this->belongsTo(User::class, 'reporter_id');
     }
 
     public function comments()
@@ -38,5 +38,20 @@ class Task extends Model
     public function activityLogs()
     {
         return $this->hasMany(ActivityLog::class);
+    }
+
+    public function executions()
+    {
+        return $this->hasMany(AgentExecution::class);
+    }
+
+    public function originTask()
+    {
+        return $this->belongsTo(Task::class, 'origin_task_id');
+    }
+
+    public function escapedBugs()
+    {
+        return $this->hasMany(Task::class, 'origin_task_id');
     }
 }

@@ -10,7 +10,11 @@ const LANES = [
   {id:'review', label:'Em revisão', tone:'violet'},
   {id:'publishing', label:'Em publicação', tone:'orange'},
   {id:'published', label:'Publicado', tone:'teal'},
+  {id:'blocked', label:'Bloqueado', tone:'red'},
 ];
+// The orchestrator is the only one who moves a task into 'blocked' (after it
+// exceeds max_attempts), so it is not a manual drag-and-drop target.
+const MANUAL_LANES = ['todo','in_progress','review','publishing','published'];
 
 const AGENT_LABELS = {developer_worker:'Desenvolvedor',tester_worker:'Testador',devops_worker:'DevOps'};
 const ACTIVE_LANES = ['in_progress','review','publishing'];
@@ -61,6 +65,7 @@ export default function KanbanBoard(){
 
   function onDrop(e, projectId, lane){
     e.preventDefault();
+    if (!MANUAL_LANES.includes(lane)) return;
     const taskId = e.dataTransfer.getData('text/plain');
     if (!taskId) return;
     const task = projects.flatMap(project=>project.tasks || []).find(item=>String(item.id) === String(taskId));
@@ -158,7 +163,7 @@ export default function KanbanBoard(){
                 <div className="task-list">
                 {tasks.map(t=> (
                   <div className="task-card" key={t.id} draggable onDragStart={e=>onDragStart(e,t.id)} onClick={()=>openTask(t)} role="button" tabIndex="0" onKeyDown={e=>e.key === 'Enter' && openTask(t)}>
-                    <div className="task-card-top"><span className="task-id">TASK-{t.id}</span>{ACTIVE_LANES.includes(t.lane) && <span className="execution-loader" title="Atividade em execução"><i></i> Executando</span>}</div>
+                    <div className="task-card-top"><span className="task-id">TASK-{t.id}</span>{ACTIVE_LANES.includes(t.lane) && <span className="execution-loader" title="Atividade em execução"><i></i> Executando</span>}{t.attempt > 1 && <span className="task-attempt" title="Tentativas de desenvolvimento">tentativa {t.attempt}/{t.max_attempts}</span>}</div>
                     <h4>{t.title}</h4>{t.description && <p>{t.description}</p>}
                     {t.work_summary && <div className="work-summary"><strong>Resumo</strong>{t.work_summary}</div>}
                     <div className="task-meta"><span>{AGENT_LABELS[t.assigned_agent] || 'Sem agente'}</span>{t.branch && <code>{t.branch}</code>}{t.version && <b>v{t.version}</b>}</div>
@@ -196,7 +201,7 @@ export default function KanbanBoard(){
           </div>
           {selectedTask.work_summary && <div className="modal-summary"><small>Resumo do trabalho</small><p>{selectedTask.work_summary}</p></div>}
           {selectedTask.comments?.length > 0 && <div className="modal-comments"><small>Histórico</small>{selectedTask.comments.map(comment=><p key={comment.id}>{comment.comment}</p>)}</div>}
-          <footer className="modal-actions">{selectedTask.lane === 'todo' ? <button className="button danger" onClick={deleteTask}>Excluir tarefa</button> : <span className="delete-hint">A exclusão só está disponível em “A fazer”.</span>}{['todo','in_progress','review','publishing'].includes(selectedTask.lane) && <button className="button primary" onClick={retryTask} disabled={retrying}>{retrying ? 'Reenfileirando…' : '↻ Reenfileirar'}</button>}<button className="button secondary" onClick={()=>setSelectedTask(null)}>Fechar</button></footer>
+          <footer className="modal-actions">{selectedTask.lane === 'todo' ? <button className="button danger" onClick={deleteTask}>Excluir tarefa</button> : <span className="delete-hint">A exclusão só está disponível em “A fazer”.</span>}{['todo','in_progress','review','publishing','blocked'].includes(selectedTask.lane) && <button className="button primary" onClick={retryTask} disabled={retrying}>{retrying ? 'Reenfileirando…' : '↻ Reenfileirar'}</button>}<button className="button secondary" onClick={()=>setSelectedTask(null)}>Fechar</button></footer>
         </section>
       </div>}
     </section>

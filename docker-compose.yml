@@ -50,6 +50,7 @@ services:
     volumes:
       - ./backend:/var/www/html
       - backend_vendor:/var/www/html/vendor
+      - ./agents:/var/www/html/agents:ro
     depends_on:
       postgres:
         condition: service_healthy

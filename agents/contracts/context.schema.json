@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "description": "The 'Task Context' bundle interpolated into agents/prompts/*.md for each run. Kept intentionally small: the agent gets only what it needs plus repository access to investigate further.",
+  "properties": {
+    "task_id": {"type": "integer"},
+    "title": {"type": "string"},
+    "objective": {"type": "string", "description": "Task description, used as the objective/acceptance criteria."},
+    "stack": {"type": ["string", "null"], "description": "e.g. 'React + Laravel', derived from the project's frontend/backend/database fields."},
+    "branch": {"type": "string"},
+    "attempt": {"type": "integer"},
+    "max_attempts": {"type": "integer"},
+    "last_result": {"type": ["string", "null"], "description": "Summary of the most recent agent_executions row for this task, if any."}
+  },
+  "required": ["task_id", "title", "objective", "branch", "attempt", "max_attempts"],
+  "additionalProperties": false
+}

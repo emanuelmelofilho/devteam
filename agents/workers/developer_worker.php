@@ -1,7 +1,7 @@
 <?php
 // Placeholder Developer worker that consumes RabbitMQ 'tasks_developer' queue
 
-require __DIR__ . '/../backend/vendor/autoload.php';
+require __DIR__ . '/../../backend/vendor/autoload.php';
 
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 

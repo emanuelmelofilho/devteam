@@ -1,0 +1,30 @@
+{
+  "type": "object",
+  "description": "Payload published by the orchestrator (AgentQueueService) to tasks_developer|tasks_tester|tasks_devops.",
+  "properties": {
+    "task_id": {"type": "integer"},
+    "execution_id": {"type": ["integer", "null"], "description": "agent_executions row created by the orchestrator before dispatch; the worker echoes it back on /report."},
+    "attempt": {"type": "integer", "description": "Attempt number for this task+agent pair, computed by the orchestrator."},
+    "title": {"type": "string"},
+    "description": {"type": ["string", "null"]},
+    "lane": {"type": "string"},
+    "assigned_agent": {"type": "string", "enum": ["developer_worker", "tester_worker", "devops_worker"]},
+    "branch": {"type": ["string", "null"], "description": "Dedicated git branch for this task, e.g. agent/task-123."},
+    "project_id": {"type": "integer"},
+    "project_name": {"type": ["string", "null"]},
+    "project_directory": {"type": ["string", "null"]},
+    "project_stack": {
+      "type": ["object", "null"],
+      "properties": {
+        "frontend": {"type": ["string", "null"]},
+        "backend": {"type": ["string", "null"]},
+        "database": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "api_token": {"type": "string"},
+    "credential_token": {"type": ["string", "null"]}
+  },
+  "required": ["task_id", "title", "lane", "assigned_agent", "project_id", "api_token"],
+  "additionalProperties": false
+}

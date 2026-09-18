@@ -2,11 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\ActivityLog;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
-use App\Services\AgentQueueService;
 use App\Notifications\TaskUpdatedNotification;
+use App\Services\AgentQueueService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Mockery\MockInterface;
@@ -29,7 +30,11 @@ class TaskWorkflowTest extends TestCase
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/kanban/tasks', [
             'project_id' => $project->id, 'title' => 'Nova tela', 'description' => str_repeat('Descrição detalhada. ', 32), 'assigned_agent' => 'developer_worker',
         ]);
-        $response->assertCreated()->assertJsonPath('lane', 'todo')->assertJsonPath('branch', 'developer');
+        $response->assertCreated()->assertJsonPath('lane', 'todo')->assertJsonPath('branch', null);
+
+        $taskId = $response->json('id');
+        $this->patchJson("/api/kanban/tasks/{$taskId}", ['lane' => 'in_progress'])
+            ->assertOk()->assertJsonPath('branch', "agent/task-{$taskId}");
     }
 
     public function test_task_accepts_a_short_request_but_still_requires_description(): void
@@ -104,8 +109,8 @@ class TaskWorkflowTest extends TestCase
         $user = User::factory()->create();
         $first = Project::create(['name' => 'Primeiro', 'directory' => '/first']);
         $second = Project::create(['name' => 'Segundo', 'directory' => '/second']);
-        \App\Models\ActivityLog::create(['project_id' => $first->id, 'user_id' => $user->id, 'event' => 'project.created', 'title' => 'Primeiro', 'details' => 'Detalhes do primeiro projeto.']);
-        \App\Models\ActivityLog::create(['project_id' => $second->id, 'user_id' => $user->id, 'event' => 'project.created', 'title' => 'Segundo', 'details' => 'Detalhes do segundo projeto.']);
+        ActivityLog::create(['project_id' => $first->id, 'user_id' => $user->id, 'event' => 'project.created', 'title' => 'Primeiro', 'details' => 'Detalhes do primeiro projeto.']);
+        ActivityLog::create(['project_id' => $second->id, 'user_id' => $user->id, 'event' => 'project.created', 'title' => 'Segundo', 'details' => 'Detalhes do segundo projeto.']);
 
         $this->actingAs($user, 'sanctum')->getJson("/api/kanban/logs?project_id={$first->id}")
             ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.project.name', 'Primeiro');
@@ -115,8 +120,8 @@ class TaskWorkflowTest extends TestCase
     {
         $user = User::factory()->create();
         $project = Project::create(['name' => 'Projeto isolado', 'directory' => '/isolated']);
-        \App\Models\ActivityLog::create(['scope' => 'devteam', 'event' => 'devteam.updated', 'title' => 'Devteam', 'details' => 'Alteração interna.']);
-        \App\Models\ActivityLog::create(['scope' => 'project', 'project_id' => $project->id, 'event' => 'project.updated', 'title' => 'Projeto', 'details' => 'Alteração do projeto.']);
+        ActivityLog::create(['scope' => 'devteam', 'event' => 'devteam.updated', 'title' => 'Devteam', 'details' => 'Alteração interna.']);
+        ActivityLog::create(['scope' => 'project', 'project_id' => $project->id, 'event' => 'project.updated', 'title' => 'Projeto', 'details' => 'Alteração do projeto.']);
 
         $this->actingAs($user, 'sanctum')->getJson('/api/kanban/logs?scope=devteam&per_page=5')
             ->assertOk()->assertJsonPath('data.0.scope', 'devteam');
@@ -182,5 +187,36 @@ class TaskWorkflowTest extends TestCase
 
         $this->actingAs($user, 'sanctum')->patchJson("/api/kanban/tasks/{$task->id}", ['lane' => 'in_progress'])
             ->assertOk()->assertJsonPath('assigned_agent', 'developer_worker');
+    }
+
+    public function test_a_reported_bug_reopens_development_and_blocks_after_max_attempts(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::create(['name' => 'App', 'directory' => '/app']);
+        $task = Task::create([
+            'project_id' => $project->id, 'title' => 'Com bug', 'lane' => 'review',
+            'assigned_agent' => 'tester_worker', 'branch' => 'agent/task-1', 'max_attempts' => 2,
+        ]);
+        $this->mock(AgentQueueService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('dispatch')->andReturnTrue();
+        });
+
+        $this->actingAs($user, 'sanctum')->postJson("/api/kanban/tasks/{$task->id}/report", [
+            'outcome' => 'bug', 'summary' => 'Falhou o teste de validação.',
+        ])->assertOk()->assertJsonPath('task.lane', 'in_progress')->assertJsonPath('task.attempt', 2)->assertJsonPath('blocked', false);
+
+        $task->update(['lane' => 'review', 'assigned_agent' => 'tester_worker']);
+
+        $this->postJson("/api/kanban/tasks/{$task->id}/report", [
+            'outcome' => 'bug', 'summary' => 'Falhou de novo no mesmo cenário.',
+        ])->assertOk()->assertJsonPath('task.lane', 'blocked')->assertJsonPath('task.attempt', 3)->assertJsonPath('blocked', true);
+
+        $this->assertDatabaseHas('activity_logs', ['task_id' => $task->id, 'event' => 'task.blocked']);
+
+        $task->refresh();
+        $this->assertSame('blocked', $task->lane);
+
+        $this->postJson("/api/kanban/tasks/{$task->id}/retry")
+            ->assertAccepted()->assertJsonPath('task.lane', 'in_progress')->assertJsonPath('task.attempt', 1);
     }
 }

@@ -6,7 +6,7 @@ After=network.target
 User=www-data
 Group=www-data
 Restart=always
-ExecStart=/usr/bin/php /var/www/html/agents/%i_worker.php
+ExecStart=/usr/bin/php /var/www/html/agents/workers/%i_worker.php
 
 [Install]
 WantedBy=multi-user.target
