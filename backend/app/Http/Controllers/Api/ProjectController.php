@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Project;
 use App\Models\ActivityLog;
+use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -79,6 +79,7 @@ class ProjectController extends Controller
             'title' => 'Projeto atualizado',
             'details' => "As informações e tecnologias do projeto {$project->name} foram atualizadas.",
         ]);
+
         return $project;
     }
 
@@ -94,6 +95,7 @@ class ProjectController extends Controller
             Storage::disk('project_logos')->delete($project->logo_path);
         }
         $project->delete();
+
         return response()->noContent();
     }
 }
