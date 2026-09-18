@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import api from '../api';
-import TaskForm from './TaskForm';
+import TaskForm, {TASK_TYPES} from './TaskForm';
 import ProjectTechnologyLogos from './ProjectTechnologyLogos';
 import ProjectLogo from './ProjectLogo';
 
@@ -12,8 +12,10 @@ const LANES = [
   {id:'published', label:'Publicado', tone:'teal'},
   {id:'blocked', label:'Bloqueado', tone:'red'},
 ];
-// The orchestrator is the only one who moves a task into 'blocked' (after it
-// exceeds max_attempts), so it is not a manual drag-and-drop target.
+// 'blocked' stays in LANES so a task in that state still gets its label, but the board does not
+// list it as a column. The orchestrator is the only one who moves a task there (after it exceeds
+// max_attempts), so it is not a manual drag-and-drop target either.
+const VISIBLE_LANES = LANES.filter(lane=>lane.id !== 'blocked');
 const MANUAL_LANES = ['todo','in_progress','review','publishing','published'];
 
 const AGENT_LABELS = {developer_worker:'Desenvolvedor',tester_worker:'Testador',devops_worker:'DevOps'};
@@ -155,7 +157,7 @@ export default function KanbanBoard(){
           {expandedProjects[p.id] && <div id={`project-content-${p.id}`} className="project-accordion-content">
           <TaskForm projectId={p.id} onCreated={()=>loadProjects(true)} />
           <div className="board-grid">
-            {LANES.map(lane=> {
+            {VISIBLE_LANES.map(lane=> {
               const tasks = (p.tasks || []).filter(t=>t.lane===lane.id && !isArchived(t));
               return (
               <div className="lane" key={lane.id} onDrop={e=>onDrop(e,p.id,lane.id)} onDragOver={onDragOver}>
@@ -197,6 +199,7 @@ export default function KanbanBoard(){
             <div><small>Agente responsável</small>{AGENTS_BY_LANE[selectedTask.lane] ? <select className="agent-select" value={selectedTask.assigned_agent || ''} onChange={event=>assignAgent(event.target.value)}><option value="" disabled>Selecione um agente</option>{AGENTS_BY_LANE[selectedTask.lane].map(agent=><option key={agent} value={agent}>{AGENT_LABELS[agent]}</option>)}</select> : <strong>{AGENT_LABELS[selectedTask.assigned_agent] || 'Não designado'}</strong>}</div>
             <div><small>Branch</small><strong>{selectedTask.branch || '—'}</strong></div>
             <div><small>Versão</small><strong>{selectedTask.version ? `v${selectedTask.version}` : '—'}</strong></div>
+            <div><small>Tipo de alteração</small><strong>{TASK_TYPES[selectedTask.type]?.label || '—'}</strong></div>
             <div><small>Atualizada em</small><strong>{selectedTask.updated_at ? new Date(selectedTask.updated_at).toLocaleString('pt-BR') : '—'}</strong></div>
           </div>
           {selectedTask.work_summary && <div className="modal-summary"><small>Resumo do trabalho</small><p>{selectedTask.work_summary}</p></div>}

@@ -77,6 +77,19 @@ function projectDirectory(value) {
   return directory;
 }
 
+// The kind of change decides which part of the version DevOps raises, following semantic
+// versioning: the numbers to the right of the one that goes up return to zero.
+const CHANGE_TYPES = {
+  feature: {label: 'Nova funcionalidade', rule: 'aumente em 1 o primeiro número e zere o segundo e o terceiro', example: '1.0.12 → 2.0.0'},
+  improvement: {label: 'Melhoria de funcionalidade', rule: 'aumente em 1 o segundo número, zere o terceiro e mantenha o primeiro', example: '1.0.12 → 1.1.0'},
+  fix: {label: 'Correção de funcionalidade', rule: 'aumente em 1 o terceiro número e mantenha o primeiro e o segundo', example: '1.0.12 → 1.0.13'},
+};
+const changeType = task => CHANGE_TYPES[task.type] || CHANGE_TYPES.fix;
+const versionRule = task => {
+  const type = changeType(task);
+  return `Esta tarefa é do tipo "${type.label}", então, partindo da versão atual, ${type.rule} (ex.: ${type.example}).`;
+};
+
 // Builds the small "Task Context" bundle (see agents/contracts/context.schema.json)
 // interpolated into the role's prompt template, instead of dumping the whole
 // project into the prompt.
@@ -86,6 +99,7 @@ function buildContext(task) {
     `Tarefa #${task.task_id}: ${task.title}`,
     `Descrição: ${task.description || 'sem descrição'}`,
     `Projeto: ${task.project_name}`,
+    `Tipo de alteração: ${changeType(task).label}`,
   ];
   if (stack) lines.push(`Stack: ${stack}`);
   if (task.work_summary) lines.push(`Último resultado registrado: ${task.work_summary}`);
@@ -97,6 +111,7 @@ function promptFor(task) {
   const branch = task.branch || `agent/task-${task.task_id}`;
   return promptTemplate
     .replace('{{context}}', buildContext(task))
+    .replaceAll('{{version_rule}}', versionRule(task))
     .replaceAll('{{branch}}', branch)
     .replaceAll('{{attempt}}', String(task.attempt ?? 1))
     .replaceAll('{{max_attempts}}', String(task.max_attempts ?? 3));

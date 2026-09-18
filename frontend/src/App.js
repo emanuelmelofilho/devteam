@@ -5,7 +5,6 @@ import Login from './components/Login';
 import Projects from './components/Projects';
 import Logs from './components/Logs';
 import Metrics from './components/Metrics';
-import NotificationCenter from './components/NotificationCenter';
 
 function App(){
   const [view, setView] = useState('board');
@@ -36,7 +35,6 @@ function App(){
             <button className={view === 'settings' ? 'active' : ''} onClick={()=>setView('settings')}>Configurações</button>
           </nav>
           <div className="user-menu">
-            <NotificationCenter />
             <span className="avatar">{(user.name || user.email || 'U').charAt(0).toUpperCase()}</span>
             <div><strong>{user.name}</strong><small>{user.email}</small></div>
             <button className="button ghost" onClick={handleLogout}>Sair</button>

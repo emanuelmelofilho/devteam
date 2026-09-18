@@ -1,5 +1,14 @@
 # Módulo de atividades
 
+
+## v0.2.20
+
+- Adiciona o campo **Tipo de alteração** ao criar uma tarefa: Nova funcionalidade, Melhoria de funcionalidade ou Correção de funcionalidade. A escolha é obrigatória no formulário e aparece no detalhe da tarefa.
+- O tipo define qual número da versão o DevOps aumenta ao publicar, seguindo o versionamento semântico (os números à direita voltam a zero): nova funcionalidade sobe o primeiro (1.0.12 → 2.0.0), melhoria sobe o segundo (1.0.12 → 1.1.0) e correção sobe o terceiro (1.0.12 → 1.0.13).
+- As tarefas existentes e as criadas sem tipo pela API contam como correção, que é o comportamento anterior (versão de correção).
+- Remove a raia **Bloqueado** do quadro. A tarefa continua podendo ser bloqueada pelo orquestrador, mas deixa de ser exibida no quadro.
+- Remove a central de notificações do cabeçalho.
+
 ## v0.2.15
 
 - Persiste branch e hash do commit nos metadados da tarefa ao encaminhá-la para revisão.

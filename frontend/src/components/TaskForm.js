@@ -1,9 +1,17 @@
 import React, {useState} from 'react';
 import api from '../api';
 
+// What the change is decides which part of the version DevOps raises when it publishes.
+export const TASK_TYPES = {
+  feature: {label: 'Nova funcionalidade', versionHint: 'Sobe o primeiro número da versão e zera os outros dois (ex.: 1.0.12 → 2.0.0).'},
+  improvement: {label: 'Melhoria de funcionalidade', versionHint: 'Sobe o segundo número da versão e zera o último (ex.: 1.0.12 → 1.1.0).'},
+  fix: {label: 'Correção de funcionalidade', versionHint: 'Sobe o terceiro número da versão (ex.: 1.0.12 → 1.0.13).'},
+};
+
 export default function TaskForm({projectId, onCreated}){
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [type, setType] = useState('');
   const [assignedAgent, setAssignedAgent] = useState('developer_worker');
   const [originTaskId, setOriginTaskId] = useState('');
   const [open, setOpen] = useState(false);
@@ -15,10 +23,10 @@ export default function TaskForm({projectId, onCreated}){
     setSaving(true);
     setError('');
     try{
-      const payload = {project_id: projectId, title, description, assigned_agent: assignedAgent};
+      const payload = {project_id: projectId, title, description, type, assigned_agent: assignedAgent};
       if (originTaskId) payload.origin_task_id = originTaskId;
       const response = await api.post('/kanban/tasks', payload);
-      setTitle(''); setDescription(''); setAssignedAgent('developer_worker'); setOriginTaskId('');
+      setTitle(''); setDescription(''); setType(''); setAssignedAgent('developer_worker'); setOriginTaskId('');
       setOpen(false);
       if (onCreated) onCreated(response.data);
     }catch(requestError){
@@ -44,6 +52,7 @@ export default function TaskForm({projectId, onCreated}){
         <p className="modal-description">Descreva com detalhes o trabalho que deverá ser executado.</p>
         {error && <div className="alert error">{error}</div>}
         <label className="field"><span>Título</span><input placeholder="Título da tarefa" value={title} onChange={event=>setTitle(event.target.value)} required autoFocus /></label>
+        <label className="field"><span>Tipo de alteração</span><select value={type} onChange={event=>setType(event.target.value)} required><option value="" disabled>Selecione o tipo</option>{Object.entries(TASK_TYPES).map(([id, item])=><option key={id} value={id}>{item.label}</option>)}</select>{type && <small>{TASK_TYPES[type].versionHint}</small>}</label>
         <label className="field"><span>Solicitação</span><textarea placeholder="Informe requisitos, contexto, comportamento esperado e critérios de aceite." value={description} onChange={event=>setDescription(event.target.value)} required /></label>
         <label className="field"><span>Quem vai executar</span><select value={assignedAgent} onChange={event=>setAssignedAgent(event.target.value)} required><option value="developer_worker">Desenvolvedor</option><option value="tester_worker">Testador</option><option value="devops_worker">DevOps</option></select></label>
         <label className="field"><span>Tarefa de origem (opcional)</span><input type="number" min="1" placeholder="Nº da tarefa que gerou este bug, se aplicável" value={originTaskId} onChange={event=>setOriginTaskId(event.target.value)} /></label>
