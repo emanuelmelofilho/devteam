@@ -113,9 +113,66 @@ class AgentProviderSettingsApiTest extends TestCase
             ->assertJsonValidationErrors('provider');
     }
 
+    public function test_worker_can_exchange_repository_credential_token_for_the_project_password(): void
+    {
+        $task = $this->repositoryTask('rex', 'segredo-do-repo');
+
+        $this->postJson('/api/kanban/worker/credential', $this->repositoryExchange($task))
+            ->assertOk()
+            ->assertJsonPath('repository_username', 'rex')
+            ->assertJsonPath('repository_password', 'segredo-do-repo');
+    }
+
+    public function test_repository_credential_token_is_single_use(): void
+    {
+        $task = $this->repositoryTask('rex', 'segredo-do-repo');
+        $body = $this->repositoryExchange($task);
+
+        $this->postJson('/api/kanban/worker/credential', $body)->assertOk();
+        $this->postJson('/api/kanban/worker/credential', $body)
+            ->assertStatus(410)
+            ->assertJsonPath('message', 'Credencial temporária inválida ou expirada.');
+    }
+
+    public function test_expired_repository_credential_token_is_rejected(): void
+    {
+        $task = $this->repositoryTask('rex', 'segredo-do-repo');
+        $token = bin2hex(random_bytes(40));
+        WorkerCredential::create([
+            'task_id' => $task->id,
+            'purpose' => WorkerCredential::PURPOSE_REPOSITORY_PASSWORD,
+            'token_hash' => hash('sha256', $token),
+            'expires_at' => now()->subMinute(),
+        ]);
+
+        $this->postJson('/api/kanban/worker/credential', ['token' => $token, 'task_id' => $task->id, 'purpose' => 'repository_password'])
+            ->assertStatus(410);
+    }
+
+    public function test_repository_credential_exchange_requires_a_project_with_a_configured_password(): void
+    {
+        $project = Project::create(['name' => 'Sem senha', 'source_type' => 'repository', 'repository_provider' => 'github', 'repository_url' => 'https://github.com/acme/app.git', 'repository_auth_type' => 'none']);
+        $task = Task::create(['project_id' => $project->id, 'title' => 'Executar', 'lane' => 'todo']);
+
+        $this->postJson('/api/kanban/worker/credential', $this->repositoryExchange($task))
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Credencial de repositório não configurada.');
+    }
+
     private function task(): Task
     {
         $project = Project::create(['name' => 'Worker', 'directory' => '/worker']);
+
+        return Task::create(['project_id' => $project->id, 'title' => 'Executar', 'lane' => 'todo']);
+    }
+
+    private function repositoryTask(string $username, string $password): Task
+    {
+        $project = Project::create([
+            'name' => 'Worker repo', 'source_type' => 'repository', 'repository_provider' => 'github',
+            'repository_url' => 'https://github.com/acme/app.git', 'repository_auth_type' => 'https',
+            'repository_username' => $username, 'repository_password' => $password,
+        ]);
 
         return Task::create(['project_id' => $project->id, 'title' => 'Executar', 'lane' => 'todo']);
     }
@@ -131,5 +188,19 @@ class AgentProviderSettingsApiTest extends TestCase
         ]);
 
         return array_filter(['token' => $token, 'task_id' => $task->id, 'provider' => $provider]);
+    }
+
+    /** Same as exchange(), but for the repository_password purpose. */
+    private function repositoryExchange(Task $task): array
+    {
+        $token = bin2hex(random_bytes(40));
+        WorkerCredential::create([
+            'task_id' => $task->id,
+            'purpose' => WorkerCredential::PURPOSE_REPOSITORY_PASSWORD,
+            'token_hash' => hash('sha256', $token),
+            'expires_at' => now()->addMinute(),
+        ]);
+
+        return ['token' => $token, 'task_id' => $task->id, 'purpose' => 'repository_password'];
     }
 }

@@ -1,5 +1,5 @@
 import {execFileSync, spawn} from 'node:child_process';
-import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync} from 'node:fs';
+import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {homedir, tmpdir} from 'node:os';
 import {isAbsolute, join, resolve} from 'node:path';
 import {runCodex as execCodex, runClaude as execClaude} from './process_manager.mjs';
@@ -18,10 +18,13 @@ const apiBase = process.env.KANBAN_API || 'http://127.0.0.1:8000/api/kanban';
 const codexBin = process.env.CODEX_BIN || 'codex';
 const codexModel = process.env.CODEX_MODEL || null;
 const claudeBin = process.env.CLAUDE_BIN || 'claude';
-const claudeModel = process.env.CLAUDE_MODEL || null;
+// Claude Code's own default is Opus 5 (US$ 5/25 per million tokens), which cost about US$ 4-5 per
+// finished task. Sonnet 5 (US$ 2/10) is the default here; set CLAUDE_MODEL to use another model.
+const claudeModel = process.env.CLAUDE_MODEL || 'claude-sonnet-5';
 const claudeEffort = process.env.CLAUDE_EFFORT || null;
-// Hard ceiling per run so a looping agent cannot drain the account; typical runs cost cents.
-const claudeMaxBudgetUsd = process.env.CLAUDE_MAX_BUDGET_USD || '2';
+// Hard ceiling per run so a looping agent cannot drain the account. On Opus 5 a normal run cost
+// US$ 0.7-2.6, so the cap is generous; it is a safety net, not a budget.
+const claudeMaxBudgetUsd = process.env.CLAUDE_MAX_BUDGET_USD || '5';
 // Each tool definition is re-read on every turn, and Claude Code ships ~30 by default (about
 // 15K tokens of a ~28K-token context). The agents only need shell, files and search; the tester
 // must not edit code, so it does not get the edit tools.
@@ -77,6 +80,87 @@ function projectDirectory(value) {
   return directory;
 }
 
+// Working copy for a 'repository' project: the app owns and manages this folder (clone/fetch/pull),
+// unlike a 'local' project's directory, which the human manages. Same base already used to install
+// the worker's own runtime/prompts.
+const REPO_WORKSPACE_ROOT = join(homedir(), 'Library/Application Support/Devteam/repos');
+const repositoryWorkDirectory = task => join(REPO_WORKSPACE_ROOT, String(task.project_id));
+
+// Resolves a host path the same way projectDirectory() does (absolute stays as-is, otherwise
+// joined onto homedir()), plus tolerating a leading `~/`, the form people naturally type for a key.
+function resolveHostPath(value) {
+  const stripped = value.replace(/^~\//, '');
+  return isAbsolute(stripped) ? stripped : join(homedir(), stripped);
+}
+
+// Fetches the real HTTPS username/password by trading the one-time token — sibling of agentApiKey().
+async function repositoryCredential(task) {
+  if (!task.repository_credential_token) return null;
+  const response = await api('/worker/credential', task.api_token, {
+    method:'POST',
+    body:JSON.stringify({token:task.repository_credential_token,task_id:task.task_id,purpose:'repository_password'}),
+  });
+  if (!response?.repository_password) throw new Error('Backend não retornou a credencial temporária do repositório.');
+  return response;
+}
+
+// A GIT_ASKPASS script, rather than an https://user:pass@host URL or a CLI flag, keeps the password
+// out of argv (visible to any other process via `ps`) and out of `git remote -v`/shell history.
+function writeAskpassScript(directory, username, password) {
+  const scriptPath = join(directory, 'askpass.sh');
+  writeFileSync(scriptPath, '#!/bin/sh\ncase "$1" in\n  Username*) printf %s "$GIT_ASKPASS_USERNAME" ;;\n  *) printf %s "$GIT_ASKPASS_PASSWORD" ;;\nesac\n', {mode:0o700});
+  return {...process.env, GIT_ASKPASS:scriptPath, GIT_ASKPASS_USERNAME:username, GIT_ASKPASS_PASSWORD:password};
+}
+
+// Builds the git child-process environment for a repository project: HTTPS goes through the askpass
+// script above, SSH points GIT_SSH_COMMAND at a key already on this host (never its content). Host
+// key checking is left on by default — the host's own ~/.ssh/known_hosts must already trust the
+// remote, same caution as the hand-written SSH deploy step in agents/prompts/devops.md.
+async function gitEnvironmentFor(task, temp) {
+  const baseEnvironment = {...process.env, GIT_TERMINAL_PROMPT:'0'};
+  if (task.project_repository_auth_type === 'https') {
+    const credential = await repositoryCredential(task);
+    if (!credential) return baseEnvironment;
+    const username = task.project_repository_username || credential.repository_username || '';
+    return writeAskpassScript(temp, username, credential.repository_password);
+  }
+  if (task.project_repository_auth_type === 'ssh' && task.project_repository_ssh_key_path) {
+    const keyPath = resolveHostPath(task.project_repository_ssh_key_path);
+    return {...baseEnvironment, GIT_SSH_COMMAND:`ssh -i ${keyPath} -o IdentitiesOnly=yes`};
+  }
+  return baseEnvironment;
+}
+
+const gitIn = (directory, args, env) => execFileSync('git', args, {cwd:directory, env, encoding:'utf8', timeout:120000, stdio:['ignore','pipe','pipe']}).trim();
+
+// Clones or updates the working copy for a 'repository' project. Never forces, never resets
+// destructively — same spirit as the deploy rules in agents/prompts/devops.md.
+async function syncRepository(task) {
+  const directory = repositoryWorkDirectory(task);
+  const temp = mkdtempSync(join(tmpdir(), `devteam-git-${role}-`));
+  try {
+    const env = await gitEnvironmentFor(task, temp);
+    if (!existsSync(directory)) {
+      mkdirSync(REPO_WORKSPACE_ROOT, {recursive:true});
+      gitIn(REPO_WORKSPACE_ROOT, ['clone', task.project_repository_url, directory], env);
+    } else {
+      gitIn(directory, ['remote', 'set-url', 'origin', task.project_repository_url], env);
+      gitIn(directory, ['fetch', 'origin'], env);
+      gitIn(directory, ['remote', 'set-head', 'origin', '--auto'], env);
+      const defaultBranch = gitIn(directory, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'], env).replace(/^origin\//, '');
+      gitIn(directory, ['checkout', '-B', defaultBranch, '--track', `origin/${defaultBranch}`], env);
+      gitIn(directory, ['pull', '--ff-only'], env);
+    }
+    return directory;
+  } finally { rmSync(temp, {recursive:true, force:true}); }
+}
+
+// Local projects behave exactly as before (projectDirectory, unchanged); a 'repository' project is
+// cloned/updated on demand instead. Tasks queued before this field existed default to 'local'.
+const resolveProjectDirectory = task => task.project_source_type === 'repository'
+  ? syncRepository(task)
+  : Promise.resolve(projectDirectory(task.project_directory));
+
 // The kind of change decides which part of the version DevOps raises, following semantic
 // versioning: the numbers to the right of the one that goes up return to zero.
 const CHANGE_TYPES = {
@@ -117,8 +201,7 @@ function promptFor(task) {
     .replaceAll('{{max_attempts}}', String(task.max_attempts ?? 3));
 }
 
-async function runCodexAgent(task, apiKey) {
-  const directory = projectDirectory(task.project_directory);
+async function runCodexAgent(task, apiKey, directory) {
   const temp = mkdtempSync(join(tmpdir(), `devteam-${role}-`));
   const output = join(temp, 'result.json');
   const args = ['exec','--approve-for-me','--ephemeral','--skip-git-repo-check','--output-schema',schemaPath,'--output-last-message',output,'--cd',directory,promptFor(task)];
@@ -143,8 +226,7 @@ async function runCodexAgent(task, apiKey) {
   } finally { rmSync(temp, {recursive:true,force:true}); }
 }
 
-async function runClaudeAgent(task, apiKey) {
-  const directory = projectDirectory(task.project_directory);
+async function runClaudeAgent(task, apiKey, directory) {
   const temp = mkdtempSync(join(tmpdir(), `devteam-${role}-`));
   // The prompt goes through stdin because variadic flags would swallow a positional argument.
   const args = ['-p','--output-format','stream-json','--verbose','--json-schema',readFileSync(schemaPath,'utf8'),'--permission-mode','bypassPermissions','--no-session-persistence',
@@ -160,14 +242,15 @@ async function runClaudeAgent(task, apiKey) {
       childEnvironment = {...process.env, ANTHROPIC_API_KEY:apiKey, CLAUDE_CONFIG_DIR:configDirectory};
       delete childEnvironment.CLAUDE_CODE_OAUTH_TOKEN;
     }
-    const {exitCode, usage, structured, model, cost, turns, error} = await execClaude({bin: claudeBin, args, env: childEnvironment, cwd: directory, stdinText: promptFor(task)});
+    const {exitCode, usage, structured, model, cost, turns, error, warning} = await execClaude({bin: claudeBin, args, env: childEnvironment, cwd: directory, stdinText: promptFor(task)});
+    if (warning) log(`Claude foi interrompido por limite (${warning}) depois de entregar o resultado; o resultado foi aceito`);
     if (error) throw new Error(`Claude terminou com erro: ${error}`);
     if (exitCode !== 0 || !structured) throw new Error(`Claude terminou com código ${exitCode}`);
     return {...structured, usage, model: model || claudeModel, cost, turns};
   } finally { rmSync(temp, {recursive:true,force:true}); }
 }
 
-const runAgent = (task, apiKey) => providerFor(task) === 'claude' ? runClaudeAgent(task, apiKey) : runCodexAgent(task, apiKey);
+const runAgent = (task, apiKey, directory) => providerFor(task) === 'claude' ? runClaudeAgent(task, apiKey, directory) : runCodexAgent(task, apiKey, directory);
 
 // Providers don't obey string limits reliably (Claude writes a sentence where Codex wrote a
 // word) and the backend rejects the whole report when a field is too long.
@@ -226,8 +309,9 @@ async function processTask(task) {
   }
   if (START_COMMENTS[role]) await comment(task.task_id, token, START_COMMENTS[role]);
 
-  const result = await runAgent(task, await agentApiKey(task));
-  const evidence = commitEvidence(projectDirectory(task.project_directory), result.commit_hash);
+  const directory = await resolveProjectDirectory(task);
+  const result = await runAgent(task, await agentApiKey(task), directory);
+  const evidence = commitEvidence(directory, result.commit_hash);
 
   const report = {
     execution_id: task.execution_id ?? null,

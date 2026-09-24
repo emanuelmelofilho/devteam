@@ -7,6 +7,7 @@ use App\Models\AiModelPrice;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
+use App\Models\WorkerCredential;
 use App\Services\AgentQueueService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -55,5 +56,26 @@ class AgentExecutionMetricsTest extends TestCase
             'attempt' => AgentExecution::where('task_id', $task->id)->where('agent', 'developer')->max('attempt') + 1,
         ])->id;
         $this->assertDatabaseHas('agent_executions', ['id' => $secondExecutionId, 'task_id' => $task->id, 'agent' => 'developer', 'attempt' => 2]);
+    }
+
+    public function test_dispatch_issues_a_repository_credential_only_for_https_repository_projects_with_a_password(): void
+    {
+        $repositoryWithPassword = Project::create([
+            'name' => 'Repo', 'source_type' => 'repository', 'repository_provider' => 'github',
+            'repository_url' => 'https://github.com/acme/app.git', 'repository_auth_type' => 'https',
+            'repository_username' => 'bot', 'repository_password' => 'segredo',
+        ]);
+        $repositoryWithoutPassword = Project::create([
+            'name' => 'Repo público', 'source_type' => 'repository', 'repository_provider' => 'github',
+            'repository_url' => 'https://github.com/acme/public.git', 'repository_auth_type' => 'none',
+        ]);
+        $local = Project::create(['name' => 'Local', 'source_type' => 'local', 'directory' => '/app']);
+
+        foreach ([$repositoryWithPassword, $repositoryWithoutPassword, $local] as $project) {
+            $task = Task::create(['project_id' => $project->id, 'title' => 'Tarefa', 'lane' => 'in_progress', 'assigned_agent' => 'developer_worker']);
+            app(AgentQueueService::class)->dispatch($task, 'test-token');
+        }
+
+        $this->assertSame(1, WorkerCredential::where('purpose', WorkerCredential::PURPOSE_REPOSITORY_PASSWORD)->count());
     }
 }

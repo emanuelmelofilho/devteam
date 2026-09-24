@@ -103,7 +103,7 @@ class AgentStepHistoryTest extends TestCase
 
     public function test_logs_from_people_have_no_execution(): void
     {
-        $this->actingAs($this->user, 'sanctum')->postJson('/api/kanban/projects', ['name' => 'Novo', 'directory' => '/novo'])->assertCreated();
+        $this->actingAs($this->user, 'sanctum')->postJson('/api/kanban/projects', ['name' => 'Novo', 'source_type' => 'local', 'directory' => '/novo'])->assertCreated();
 
         $row = $this->getJson('/api/kanban/logs?scope=projects&per_page=50')->assertOk()->json('data.0');
         $this->assertNull($row['execution']);

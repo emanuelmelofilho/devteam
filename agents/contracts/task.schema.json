@@ -22,6 +22,13 @@
       },
       "additionalProperties": false
     },
+    "project_source_type": {"type": "string", "enum": ["local", "repository"], "description": "Defaults to 'local' so tasks queued before this field existed keep behaving like today."},
+    "project_repository_provider": {"type": ["string", "null"], "enum": ["github", "gitlab", "bitbucket", "other", null]},
+    "project_repository_url": {"type": ["string", "null"]},
+    "project_repository_auth_type": {"type": ["string", "null"], "enum": ["none", "https", "ssh", null]},
+    "project_repository_username": {"type": ["string", "null"]},
+    "project_repository_ssh_key_path": {"type": ["string", "null"], "description": "Only the path to a key already on the worker host; the worker never receives the key's content."},
+    "repository_credential_token": {"type": ["string", "null"], "description": "One-time token exchanged at /worker/credential (purpose=repository_password) for the real HTTPS username/password."},
     "api_token": {"type": "string"},
     "credential_token": {"type": ["string", "null"]}
   },
