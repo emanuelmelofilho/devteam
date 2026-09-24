@@ -1,5 +1,11 @@
 # Módulo de métricas
 
+## v0.2.21
+
+- Os workers do Claude passam a usar o **Claude Sonnet 5** por padrão, em vez do Opus 5 que o Claude Code escolhe sozinho. O Opus 5 custou cerca de US$ 4 a US$ 5 por tarefa concluída (Desenvolvedor, Tester e DevOps); o Sonnet 5 tem preço cerca de 2,5 vezes menor. O modelo pode ser trocado com `CLAUDE_MODEL`.
+- Corrige o modelo e o custo registrados nas primeiras execuções, que tinham sido calculados como se o modelo fosse o Haiku 4.5.
+- O worker aceita o resultado do agente quando um limite (teto de gasto ou de turnos) interrompe a execução depois de ele já ter entregado a resposta, e o teto padrão por execução passa a US$ 5.
+
 ## v0.2.18
 
 - Corrige o custo estimado das execuções: os tokens em cache passam a ser cobrados pela tarifa de cache (cerca de um décimo da entrada), e não mais como entrada normal, o que superestimava o custo em cerca de 4 vezes.
