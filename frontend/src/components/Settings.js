@@ -1,5 +1,46 @@
 import React, {useEffect, useState} from 'react';
 import api from '../api';
+import {AGENTS, AGENT_COLORS} from './TokenUsageChart';
+
+// Which agents a provider choice applies to — today it's all of them, one global provider.
+// Fixed initials (not label[0]) so Desenvolvedor and DevOps don't both show "D".
+const AGENT_INITIALS = {developer: 'D', tester: 'T', devops: 'O'};
+
+function AgentScopeChips(){
+  return (
+    <div className="agent-scope"><small>Aplica-se a</small><div className="agent-chip-row">
+      {AGENTS.map(agent=>(
+        <span className="agent-chip" key={agent.id}><i style={{background: AGENT_COLORS[agent.id]}}>{AGENT_INITIALS[agent.id]}</i>{agent.label}</span>
+      ))}
+    </div></div>
+  );
+}
+
+function WhatsappCard(){
+  const [config, setConfig] = useState({api_url:'', token:'', phone:'', client_token:''});
+  const [message, setMessage] = useState('');
+
+  useEffect(()=>{
+    api.get('/kanban/whatsapp-settings').then(r=>{
+      if (r.data) setConfig(r.data);
+    }).catch(()=>{});
+  },[]);
+
+  function save(){
+    setMessage('');
+    api.post('/kanban/whatsapp-settings', config).then(()=>setMessage('Configurações salvas com sucesso.')).catch(()=>setMessage('Não foi possível salvar as configurações.'));
+  }
+
+  return (
+    <div className="settings-card"><div className="settings-icon">W</div><div className="settings-content"><h2>Integração WhatsApp</h2><p className="muted">Configure o serviço usado para receber notificações das tarefas.</p>
+    {message && <div className={`alert ${message.includes('sucesso') ? 'success' : 'error'}`}>{message}</div>}
+    <label className="field"><span>URL da API</span><input placeholder="https://api.exemplo.com" value={config.api_url || ''} onChange={e=>setConfig({...config, api_url:e.target.value})} /></label>
+    <label className="field"><span>Token de acesso</span><input type="password" placeholder="••••••••••••" value={config.token || ''} onChange={e=>setConfig({...config, token:e.target.value})} /></label>
+    <label className="field"><span>Número para notificações</span><input placeholder="Ex.: 5511999999999" value={config.phone || ''} onChange={e=>setConfig({...config, phone:e.target.value})} /></label>
+    <label className="field"><span>Client-Token da Z-API</span><input type="password" placeholder={config.has_client_token ? 'Configurado — deixe vazio para manter' : 'Informe o token de segurança'} value={config.client_token || ''} onChange={e=>setConfig({...config, client_token:e.target.value})} /></label>
+    <button className="button primary" onClick={save}>Salvar alterações</button></div></div>
+  );
+}
 
 function AgentKeyCard({name, icon, title, description, endpoint, placeholder}){
   const [secret, setSecret] = useState({api_key:'', configured:false, masked_key:null, updated_at:null});
@@ -51,7 +92,8 @@ function ProviderCard(){
   }
 
   return (
-    <div className="settings-card"><div className="settings-icon codex-icon">IA</div><div className="settings-content"><h2>Provedor dos agentes</h2><p className="muted">Escolha qual IA executa Developer, Tester e DevOps.</p>
+    <div className="settings-card"><div className="settings-icon provider-icon">IA</div><div className="settings-content"><h2>Provedor dos agentes</h2><p className="muted">Escolha qual IA executa Developer, Tester e DevOps.</p>
+    <AgentScopeChips />
     {message && <div className={`alert ${message.includes('alterado.') ? 'success' : 'error'}`}>{message}</div>}
     <div className="provider-options">{provider.providers.map(item=>(
       <button type="button" key={item.id} className={`provider-option ${provider.provider === item.id ? 'active' : ''}`} onClick={()=>choose(item.id)} disabled={saving} aria-pressed={provider.provider === item.id}><strong>{item.label}</strong><small>{item.configured ? 'Chave configurada' : 'Sem chave: usa o login do CLI no host'}</small></button>
@@ -59,33 +101,31 @@ function ProviderCard(){
   );
 }
 
+const SECTIONS = [
+  {id:'whatsapp', label:'WhatsApp', icon:'W', iconClass:'', render: () => <WhatsappCard />},
+  {id:'provider', label:'Provedor dos agentes', icon:'IA', iconClass:'provider-icon', render: () => <ProviderCard />},
+  {id:'codex', label:'Chave do Codex', icon:'C', iconClass:'codex-icon', render: () => <AgentKeyCard name="Codex" icon="codex-icon" title="Chave do Codex" description="Configure a chave da API da OpenAI utilizada pelas automações." endpoint="/kanban/codex-settings" placeholder="sk-••••••••••••••••••••" />},
+  {id:'claude', label:'Chave do Claude', icon:'C', iconClass:'claude-icon', render: () => <AgentKeyCard name="Claude" icon="claude-icon" title="Chave do Claude" description="Configure a chave da API da Anthropic utilizada pelas automações." endpoint="/kanban/claude-settings" placeholder="sk-ant-••••••••••••••••" />},
+];
+
 export default function Settings(){
-  const [config, setConfig] = useState({api_url:'', token:'', phone:'', client_token:''});
-  const [message, setMessage] = useState('');
-
-  useEffect(()=>{
-    api.get('/kanban/whatsapp-settings').then(r=>{
-      if (r.data) setConfig(r.data);
-    }).catch(()=>{});
-  },[]);
-
-  function save(){
-    setMessage('');
-    api.post('/kanban/whatsapp-settings', config).then(()=>setMessage('Configurações salvas com sucesso.')).catch(()=>setMessage('Não foi possível salvar as configurações.'));
-  }
+  const [activeId, setActiveId] = useState(SECTIONS[0].id);
+  const active = SECTIONS.find(section=>section.id === activeId) || SECTIONS[0];
 
   return (
     <section><div className="page-heading"><div><span className="eyebrow blue">INTEGRAÇÕES</span><h1>Configurações</h1><p>Gerencie as conexões externas do seu workspace.</p></div></div>
-      <div className="settings-grid"><div className="settings-card"><div className="settings-icon">W</div><div className="settings-content"><h2>Integração WhatsApp</h2><p className="muted">Configure o serviço usado para receber notificações das tarefas.</p>
-      {message && <div className={`alert ${message.includes('sucesso') ? 'success' : 'error'}`}>{message}</div>}
-      <label className="field"><span>URL da API</span><input placeholder="https://api.exemplo.com" value={config.api_url || ''} onChange={e=>setConfig({...config, api_url:e.target.value})} /></label>
-      <label className="field"><span>Token de acesso</span><input type="password" placeholder="••••••••••••" value={config.token || ''} onChange={e=>setConfig({...config, token:e.target.value})} /></label>
-      <label className="field"><span>Número para notificações</span><input placeholder="Ex.: 5511999999999" value={config.phone || ''} onChange={e=>setConfig({...config, phone:e.target.value})} /></label>
-      <label className="field"><span>Client-Token da Z-API</span><input type="password" placeholder={config.has_client_token ? 'Configurado — deixe vazio para manter' : 'Informe o token de segurança'} value={config.client_token || ''} onChange={e=>setConfig({...config, client_token:e.target.value})} /></label>
-      <button className="button primary" onClick={save}>Salvar alterações</button></div></div>
-      <ProviderCard />
-      <AgentKeyCard name="Codex" icon="codex-icon" title="Chave do Codex" description="Configure a chave da API da OpenAI utilizada pelas automações." endpoint="/kanban/codex-settings" placeholder="sk-••••••••••••••••••••" />
-      <AgentKeyCard name="Claude" icon="claude-icon" title="Chave do Claude" description="Configure a chave da API da Anthropic utilizada pelas automações." endpoint="/kanban/claude-settings" placeholder="sk-ant-••••••••••••••••" /></div>
+      <div className="settings-layout">
+        <nav className="settings-nav" role="tablist" aria-label="Seções de configurações">
+          {SECTIONS.map(section=>(
+            <button type="button" key={section.id} role="tab" id={`settings-tab-${section.id}`} aria-selected={activeId === section.id} aria-controls="settings-panel" className={activeId === section.id ? 'active' : ''} onClick={()=>setActiveId(section.id)}>
+              <span className={`settings-nav-icon ${section.iconClass}`}>{section.icon}</span>{section.label}
+            </button>
+          ))}
+        </nav>
+        <div className="settings-panel" id="settings-panel" role="tabpanel" aria-labelledby={`settings-tab-${activeId}`}>
+          {active.render()}
+        </div>
+      </div>
     </section>
   );
 }
