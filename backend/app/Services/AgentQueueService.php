@@ -45,13 +45,25 @@ class AgentQueueService
             $channel = $connection->channel();
             $channel->queue_declare($queue, false, true, false, false);
             $task->loadMissing('project');
+            WorkerCredential::query()->where('expires_at', '<', now())->delete();
             $credentialToken = null;
             if (AgentProviderSetting::apiKeyFor($provider)) {
                 $credentialToken = Str::random(80);
-                WorkerCredential::query()->where('expires_at', '<', now())->delete();
                 WorkerCredential::create([
                     'task_id' => $task->id,
+                    'purpose' => WorkerCredential::PURPOSE_PROVIDER_API_KEY,
                     'token_hash' => hash('sha256', $credentialToken),
+                    'expires_at' => now()->addMinutes(5),
+                ]);
+            }
+            $repositoryCredentialToken = null;
+            $project = $task->project;
+            if ($project?->source_type === 'repository' && $project->repository_auth_type === 'https' && filled($project->repository_password)) {
+                $repositoryCredentialToken = Str::random(80);
+                WorkerCredential::create([
+                    'task_id' => $task->id,
+                    'purpose' => WorkerCredential::PURPOSE_REPOSITORY_PASSWORD,
+                    'token_hash' => hash('sha256', $repositoryCredentialToken),
                     'expires_at' => now()->addMinutes(5),
                 ]);
             }
@@ -72,6 +84,13 @@ class AgentQueueService
                     'backend' => $task->project?->backend,
                     'database' => $task->project?->database,
                 ],
+                'project_source_type' => $task->project?->source_type ?? 'local',
+                'project_repository_provider' => $task->project?->repository_provider,
+                'project_repository_url' => $task->project?->repository_url,
+                'project_repository_auth_type' => $task->project?->repository_auth_type,
+                'project_repository_username' => $task->project?->repository_username,
+                'project_repository_ssh_key_path' => $task->project?->repository_ssh_key_path,
+                'repository_credential_token' => $repositoryCredentialToken,
                 'provider' => $provider,
                 'api_token' => $apiToken,
                 'credential_token' => $credentialToken,
@@ -88,6 +107,9 @@ class AgentQueueService
         } catch (Throwable $error) {
             if (isset($credentialToken) && $credentialToken) {
                 WorkerCredential::where('token_hash', hash('sha256', $credentialToken))->delete();
+            }
+            if (isset($repositoryCredentialToken) && $repositoryCredentialToken) {
+                WorkerCredential::where('token_hash', hash('sha256', $repositoryCredentialToken))->delete();
             }
             $execution->delete();
             report($error);

@@ -38,6 +38,7 @@ class TaskController extends Controller
             'project_id' => 'required|exists:projects,id',
             'title' => 'required|string',
             'description' => 'required|string',
+            'type' => 'sometimes|in:'.implode(',', Task::TYPES),
             'assigned_agent' => 'required|in:developer_worker,tester_worker,devops_worker',
             'assignee_id' => 'nullable|exists:users,id',
             'origin_task_id' => 'nullable|exists:tasks,id',

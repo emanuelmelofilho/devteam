@@ -9,7 +9,9 @@ class Task extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['project_id', 'title', 'description', 'lane', 'assigned_agent', 'branch', 'work_summary', 'version', 'attempt', 'max_attempts', 'assignee_id', 'reporter_id', 'origin_task_id', 'metadata'];
+    public const TYPES = ['feature', 'improvement', 'fix'];
+
+    protected $fillable = ['project_id', 'title', 'description', 'type', 'lane', 'assigned_agent', 'branch', 'work_summary', 'version', 'attempt', 'max_attempts', 'assignee_id', 'reporter_id', 'origin_task_id', 'metadata'];
 
     protected $casts = [
         'metadata' => 'array',

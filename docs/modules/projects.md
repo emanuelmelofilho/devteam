@@ -1,5 +1,15 @@
 # Módulo de projetos
 
+## v0.2.22
+
+- Adiciona a origem do projeto: **Local** (comportamento de sempre, com o campo Diretório) ou **Repositório**.
+- Para um projeto do tipo Repositório, o Diretório deixa de ser obrigatório: o worker clona e atualiza automaticamente o código, numa pasta própria, antes de cada execução.
+- Adiciona a escolha do provedor do repositório (GitHub, GitLab, Bitbucket ou Outro), com nome e ícone, e o campo de URL do repositório.
+- Adiciona a autenticação do repositório: sem autenticação, usuário e senha/token (HTTPS) ou uma chave SSH.
+- A senha ou token HTTPS é criptografada no banco e nunca é reexibida; a interface mostra apenas se já existe uma credencial configurada, e deixar o campo em branco ao editar mantém a senha salva.
+- A chave SSH é referenciada apenas pelo caminho no host dos workers (ex.: `~/.ssh/id_rsa_projeto`) — o conteúdo da chave nunca é enviado nem armazenado, mesma convenção já usada no deploy de produção do DevOps.
+- A listagem de projetos passa a mostrar a URL do repositório no lugar do diretório quando o projeto é do tipo Repositório.
+
 ## v0.2.14
 
 - Corrige a exibição da logo nas listagens de projetos e atividades quando a interface é acessada por hostname ou IP diferente de `localhost`.

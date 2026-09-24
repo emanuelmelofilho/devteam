@@ -69,7 +69,10 @@ function logClaudeEvent(event) {
       else if (block.type === 'tool_use') process.stdout.write(`[claude] ${block.name} ${clip(JSON.stringify(block.input))}\n`);
     }
   } else if (event.type === 'result') {
-    process.stdout.write(`[claude] resultado: ${event.subtype}${event.is_error ? ' (erro)' : ''}\n`);
+    const cost = typeof event.total_cost_usd === 'number' ? ` · US$ ${event.total_cost_usd.toFixed(4)}` : '';
+    const steps = event.num_turns != null ? ` · ${event.num_turns} passos` : '';
+    const model = mainModel(event.modelUsage);
+    process.stdout.write(`[claude] resultado: ${event.subtype}${event.is_error ? ' (erro)' : ''}${steps}${cost}${model ? ` · ${model}` : ''}\n`);
   }
 }
 
@@ -102,13 +105,14 @@ function mainModel(modelUsage) {
  * model for housekeeping), `cost` is Claude Code's own USD figure for the run and `turns` the
  * number of model round trips, which is what drives token use: every turn re-reads the context.
  *
- * @returns {Promise<{exitCode:number, usage:object, structured:object|null, model:string|null, cost:number|null, turns:number|null, error:string|null}>}
+ * @returns {Promise<{exitCode:number, usage:object, structured:object|null, model:string|null, cost:number|null, turns:number|null, error:string|null, warning:string|null}>}
  */
 export function runClaude({bin, args, env, cwd, stdinText}) {
   return new Promise((resolvePromise, reject) => {
     const child = spawn(bin, args, {env, cwd, stdio: ['pipe', 'pipe', 'inherit']});
     let buffer = '';
     let final = null;
+    let delivered = null;
 
     const handleLine = line => {
       if (!line.trim()) return;
@@ -116,6 +120,13 @@ export function runClaude({bin, args, env, cwd, stdinText}) {
         const event = JSON.parse(line);
         logClaudeEvent(event);
         if (event.type === 'result') final = event;
+        // The answer is a StructuredOutput tool call; keep it because a limit (budget, turns)
+        // can end the run right after it and the final event would then carry no answer.
+        if (event.type === 'assistant') {
+          for (const block of event.message?.content || []) {
+            if (block.type === 'tool_use' && block.name === 'StructuredOutput' && block.input) delivered = block.input;
+          }
+        }
       } catch {
         // Ignore non-JSON output (banners, warnings).
       }
@@ -137,6 +148,9 @@ export function runClaude({bin, args, env, cwd, stdinText}) {
       if (!structured && final && !final.is_error) {
         try { structured = JSON.parse(final.result); } catch { /* not JSON */ }
       }
+      // A run cut off by a limit after it already gave its answer still did the work.
+      const limitAfterAnswer = Boolean(delivered) && /^error_max_/.test(final?.subtype || '');
+      if (!structured && limitAfterAnswer) structured = delivered;
       resolvePromise({
         exitCode: code ?? 1,
         usage: claudeUsage(final?.usage),
@@ -144,7 +158,8 @@ export function runClaude({bin, args, env, cwd, stdinText}) {
         model: mainModel(final?.modelUsage),
         cost: typeof final?.total_cost_usd === 'number' ? final.total_cost_usd : null,
         turns: final?.num_turns ?? null,
-        error: final?.is_error ? clip(final.result) || final.subtype : null,
+        error: final?.is_error && !limitAfterAnswer ? clip(final.result) || final.subtype : null,
+        warning: limitAfterAnswer ? final.subtype : null,
       });
     });
 
